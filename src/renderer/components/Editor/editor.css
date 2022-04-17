@@ -1,0 +1,33 @@
+#canvasContainer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  padding-top: 5px;
+}
+#canvasButtons {
+  display: inline-flex;
+  height: 40px;
+  margin:5px;
+}
+#canvasButtons > li {
+  color: white;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+#canvas,
+#drawCanvas,#mouseCanvas {
+  position: absolute;
+  top:45px;
+  height: calc(100% - 45px);
+  width: 100%;
+}
+#drawCanvas {
+  z-index: 1000;
+}
+#mouseCanvas {
+  z-index: 1200;
+  pointer-events: none;
+}

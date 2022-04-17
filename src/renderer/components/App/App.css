@@ -1,0 +1,80 @@
+/*
+ * @NOTE: Prepend a `~` to css file paths that are in your node_modules
+ *        See https://github.com/webpack-contrib/sass-loader#imports
+ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+#root {
+  inset: 0;
+  position: absolute;
+}
+
+body {
+  color: rgb(44, 41, 41);
+  height: 100vh;
+  width: 100vw;
+ background-color: #dddddde7;
+  font-family: sans-serif;
+  overflow-y: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+button {
+  background-color: white;
+  padding: 10px;
+  border-radius: 15px;
+  border: none;
+  appearance: none;
+  font-size: 1.3rem;
+  box-shadow: 0px 8px 28px -6px rgba(24, 39, 75, 0.12),
+    0px 18px 88px -4px rgba(24, 39, 75, 0.14);
+  transition: all ease-in 0.1s;
+  cursor: pointer;
+  opacity: 1;
+  margin: 2px;
+}
+
+button:hover {
+  box-shadow: 0 0 0 1px black;
+}
+
+li {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  height: fit-content;
+  width: fit-content;
+  margin: 10px;
+}
+
+a:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+.mainBody {
+  position: absolute;
+  height: calc(100% - 35px);
+  width: 100%;
+  top: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.Hello {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.flexColumn {
+  display: flex;
+  flex-direction: column;
+  gap:8px;
+}
