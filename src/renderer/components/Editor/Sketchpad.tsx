@@ -3,17 +3,18 @@ import {
   ListItemProps,
   styled,
   Theme,
-  useTheme,
+  useTheme
 } from '@mui/material';
 import { BOUNDS_PROPS, TOOL_OPTIONS } from 'interfaces';
 import { observer } from 'mobx-react-lite';
 import React, { useEffect, useRef, useState } from 'react';
-import { EntitiesType, ToolStore } from 'store/Store';
+import { IEntity, ToolStore } from 'store/Store';
+import { Utils } from 'utils';
 import {
   Circle,
   Line,
   Rectangle,
-  SelectBox,
+  SelectBox
 } from '../../utils/ShapeFunctions/index';
 
 interface SketchpadButtonProps extends ListItemProps {
@@ -172,13 +173,22 @@ const Sketchpad = () => {
     }
   };
 
+  function clearDrawCanvas() {
+    if (canvas.current && drawContext.current) {
+      const canvasWidth = canvas.current.width;
+      const canvasHeight = canvas.current.height;
+      drawContext.current.clearRect(0, 0, canvasWidth, canvasHeight);
+    }
+  }
   function clearCanvas() {
     if (canvas.current && context.current && drawContext.current) {
       const canvasWidth = canvas.current.width;
       const canvasHeight = canvas.current.height;
       context.current.clearRect(0, 0, canvasWidth, canvasHeight);
+      drawContext.current.clearRect(0, 0, canvasWidth, canvasHeight);
       circleRef.current = new Circle();
       lineRef.current = new Line();
+      rectangleRef.current = new Rectangle();
     }
   }
 
@@ -214,20 +224,50 @@ const Sketchpad = () => {
       }
     });
   }
-
-  const renderSelection = () => {
-    if (selectBox.readyToRender && context.current && drawContext.current) {
-      context.current.strokeStyle =''
-      const entity = selectBox.renderShape(
-        context.current,
-        drawContext.current
-      );
-      let bounds:BOUNDS_PROPS = SelectBox.parseFromJSON(entity).getBounds();
-      console.log(store.findSelectionElements(bounds));
-
-
-      }
+  const setSelectionStyles = () => {
+    if (drawContext.current) {
+      drawContext.current.save();
+      drawContext.current.strokeStyle = 'rgba(0,0,0,0.45)';
+      drawContext.current.lineWidth = 1;
+      drawContext.current.setLineDash([2, 4, 6, 10]);
+    }
   };
+  const resetSelectionStyles = () => {
+    if (drawContext.current) {
+      drawContext.current.restore();
+    }
+  };
+  const renderSelection = () => {
+    if (selectBox.readyToRender && context.current && drawCanvas.current &&drawContext.current) {
+      setSelectionStyles();
+      const entity = selectBox.renderShape(drawContext.current);
+      resetSelectionStyles();
+      clearDrawCanvas();
+      drawContext.current.clearRect(
+        0,
+        0,
+        drawCanvas.current.width ,
+        drawCanvas.current.height
+      );
+      let bounds: BOUNDS_PROPS = SelectBox.parseFromJSON(entity).getBounds();
+        
+      const { selected, unSelected } = store.findSelectionElements(bounds);
+      redrawAll(selected, unSelected);
+      selectBox.reset();
+    }
+  };
+
+  function redrawAll(selected: IEntity[], unselected: IEntity[]) {
+    clearCanvas();
+
+    if (context.current) {
+      Utils.drawShapes(unselected, context.current);
+      context.current.strokeStyle = 'purple';
+      Utils.drawShapes(selected, context.current);
+      context.current.restore();
+    }
+  }
+
   const renderCircle = () => {
     if (circle.readyToRender && context.current && drawContext.current) {
       const entity = circle.renderShape(context.current, drawContext.current);
@@ -291,7 +331,7 @@ const Sketchpad = () => {
     const { offsetX, offsetY } = e.nativeEvent;
     switch (store.current) {
       case TOOL_OPTIONS.SELECT_BOX:
-         handleSelectCreation(offsetX,offsetY)
+        handleSelectCreation(offsetX, offsetY);
         break;
       case TOOL_OPTIONS.CIRCLE:
         handleCircleCreation(offsetX, offsetY);
@@ -311,13 +351,13 @@ const Sketchpad = () => {
     if (drawCanvas.current && context.current && drawContext.current) {
       if (isDrawing) return;
       if (e.button === 2) return;
-     drawContext.current.clearRect(
+      drawContext.current.clearRect(
         0,
         0,
         drawCanvas.current.width,
         drawCanvas.current.height
       );
-       switch (store.current) {
+      switch (store.current) {
         case TOOL_OPTIONS.SELECT_BOX:
           renderSelection();
           break;
@@ -329,9 +369,6 @@ const Sketchpad = () => {
         case TOOL_OPTIONS.CIRCLE:
           return renderCircle();
       }
-      // context.current.stroke();
-      // context.current.save();
-      // drawContext.current.save();
     }
   };
   const draw = (offsetX: number, offsetY: number) => {
@@ -343,8 +380,10 @@ const Sketchpad = () => {
             selectBox.initialPointSet &&
             !selectBox.drawingFinalPointSet
           ) {
+            setSelectionStyles();
             selectBox.setDrawingFinalPoint(offsetX, offsetY);
             selectBox.renderPreview(drawContext.current);
+            resetSelectionStyles();
           }
           break;
         case TOOL_OPTIONS.CIRCLE:
@@ -387,6 +426,12 @@ const Sketchpad = () => {
 
   const mouseMove = (e: React.MouseEvent) => {
     const { offsetX, offsetY } = e.nativeEvent;
+    if(canvas.current && (offsetX < 0 || offsetX > canvas.current?.width
+      || offsetY < 0 || offsetY > canvas.current?.height)){
+        e.preventDefault()
+        e.stopPropagation();
+      }
+
     if (mouseContext.current && mouseCanvas.current) {
       mouseContext.current.clearRect(
         0,
@@ -426,35 +471,28 @@ const Sketchpad = () => {
     e.stopPropagation();
     setIsDrawing(false);
     setTimeout(() => {
-      Object.values(store.elements)
-        .filter((value) => value.length > 0)
-        .forEach((entities: EntitiesType[]) => {
-          entities.forEach((item: EntitiesType) => {
-            let entity: Circle | Rectangle | Line | null = null;
-            if (context.current) {
-              switch (item.type) {
-                case TOOL_OPTIONS.CIRCLE:
-                  entity = new Circle();
-                  entity.parse(item.entity);
-                  entity.drawShape(context.current);
-                  break;
-                case TOOL_OPTIONS.RECTANGLE:
-                  entity = new Rectangle();
-                  entity.parse(item.entity);
-                  entity.drawShape(context.current);
-                  break;
-                case TOOL_OPTIONS.LINE:
-                  entity = new Line();
-                  entity.parse(item.entity);
-                  break;
-                default:
-                  break;
-              }
-              if (entity) entity.drawShape(context.current);
-            }
-          });
-        });
-    }, 3000);
+      store.elements.forEach((item: IEntity) => {
+        let entity: Circle | Rectangle | Line | null = null;
+        if (context.current) {
+          switch (item.type) {
+            case TOOL_OPTIONS.CIRCLE:
+              entity = new Circle(item.entity);
+              entity.drawShape(context.current);
+              break;
+            case TOOL_OPTIONS.RECTANGLE:
+              entity = new Rectangle(item.entity);
+              entity.drawShape(context.current);
+              break;
+            case TOOL_OPTIONS.LINE:
+              entity = new Line(item.entity);
+              break;
+            default:
+              break;
+          }
+          if (entity) entity.drawShape(context.current);
+        }
+      }, 3000);
+    });
   }
 
   function handleCircleCreation(offsetX: number, offsetY: number) {

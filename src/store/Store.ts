@@ -1,38 +1,50 @@
 import { reaction } from 'mobx';
-import { Instance, types } from 'mobx-state-tree';
-import { Rectangle } from 'renderer/utils/ShapeFunctions';
+import { Instance, SnapshotOut, types } from 'mobx-state-tree';
+import { Circle, Line, Rectangle } from 'renderer/utils/ShapeFunctions';
 import { v4 as uuid } from 'uuid';
 import { BOUNDS_PROPS, TOOL_OPTIONS, TOOL_OPTIONS_TYPE } from './../interfaces';
 
 const EntitiesStore = types.model({
-  circles: types.array(
-    types.model({
-      id: types.string,
-      entity: types.string,
-      type: TOOL_OPTIONS.CIRCLE,
-    })
+  id: types.string,
+  entity: types.string,
+  type: types.union(
+    types.literal(TOOL_OPTIONS.CIRCLE),
+    types.literal(TOOL_OPTIONS.RECTANGLE),
+    types.literal(TOOL_OPTIONS.LINE)
   ),
-  rectangles: types.array(
-    types.model({
-      id: types.string,
-      entity: types.string,
-      type: TOOL_OPTIONS.RECTANGLE,
-    })
-  ),
-  lines: types.array(
-    types.model({
-      id: types.string,
-      entity: types.string,
-      type: TOOL_OPTIONS.LINE,
-    })
-  ),
+  styles: types.array(types.string),
+  // circles: types.array(
+  //   types.model({
+  //     id: types.string,
+  //     entity: types.string,
+  //     type: TOOL_OPTIONS.CIRCLE,
+  //     styles: types.array(types.string),
+  //   })
+  // ),
+  // rectangles: types.array(
+  //   types.model({
+  //     id: types.string,
+  //     entity: types.string,
+  //     type: TOOL_OPTIONS.RECTANGLE,
+  //     styles: types.array(types.string),
+  //   })
+  // ),
+  // lines: types.array(
+  //   types.model({
+  //     id: types.string,
+  //     entity: types.string,
+  //     type: TOOL_OPTIONS.LINE,
+  //     styles: types.array(types.string),
+  //   })
+  // ),
 });
 
 export type EntitiesStoreType = Instance<typeof EntitiesStore>;
+export interface IEntity extends SnapshotOut<typeof EntitiesStore>{}
 export type EntitiesType =
-  | CircleEntitiesType
+   (CircleEntitiesType
   | RectangleEntitiesType
-  | LineEntitiesType;
+  | LineEntitiesType) [];
 export type CircleEntitiesType = {
   id: string;
   entity: string;
@@ -56,7 +68,7 @@ export const ToolStore = types
     displayBrush: types.optional(types.boolean, false),
     clicks: types.optional(types.number, 0),
     maxClicksAllowed: types.optional(types.number, 0),
-    elements: types.optional(EntitiesStore, {}),
+    elements: types.optional(types.array(EntitiesStore), []),
   })
   .views((self) => ({
     getFirstTool: () => {
@@ -109,50 +121,57 @@ export const ToolStore = types
     addElement: (element: string, elementType: TOOL_OPTIONS_TYPE) => {
       switch (elementType) {
         case TOOL_OPTIONS.CIRCLE:
-          self.elements.circles.push({
+          self.elements.push({
             id: uuid(),
             entity: element,
+            type: TOOL_OPTIONS.CIRCLE,
           });
           break;
         case TOOL_OPTIONS.RECTANGLE:
-          self.elements.rectangles.push({
+          self.elements.push({
             id: uuid(),
             entity: element,
+
+            type: TOOL_OPTIONS.RECTANGLE,
           });
           break;
         case TOOL_OPTIONS.LINE:
+          self.elements.push({
+            id: uuid(),
+            entity: element,
+            type: TOOL_OPTIONS.LINE,
+          });
+          break;
         default:
           break;
       }
     },
     findSelectionElements: (
       bounds: BOUNDS_PROPS
-    ): Map<[TOOL_OPTIONS_TYPE, string], string> => {
-      let map: Map<[TOOL_OPTIONS_TYPE, string], string> = new Map();
-      // let selectedElements :EntitiesType[]= [];
-      Object.values(self.elements)
-        .filter((value) => value.length > 0)
-        .forEach((entities: EntitiesType[]) => {
-          entities.forEach((item: EntitiesType) => {
-            let entityInBounds = false;
-            switch (item.type) {
-              case TOOL_OPTIONS.CIRCLE:
-                // entityInBounds = Circle.checkInBounds(bounds);
-                break;
-              case TOOL_OPTIONS.RECTANGLE:
-                entityInBounds = Rectangle.checkIfInBounds(bounds, item.entity);
-                break;
-              case TOOL_OPTIONS.LINE:
-                // entityInBounds = Line.checkInBounds(bounds);
-                break;
-              default:
-                break;
-            }
-            if(entityInBounds)
-            map.set([item.type, item.id], item.entity);
-          });
-        });
-      return map;
+    ): { unSelected: IEntity[]; selected: IEntity[] } => {
+        let unSelected: IEntity[] = [];
+        let selected: IEntity[] = [];
+      self.elements.forEach((item:IEntity) => {
+        let entityInBounds = false;
+        switch (item.type) {
+          case TOOL_OPTIONS.CIRCLE:
+            entityInBounds = Circle.checkIfInBounds(bounds, item.entity);
+            break;
+          case TOOL_OPTIONS.RECTANGLE:
+            entityInBounds = Rectangle.checkIfInBounds(bounds, item.entity);
+            break;
+          case TOOL_OPTIONS.LINE:
+            entityInBounds = Line.checkIfInBounds(bounds, item.entity);
+            break;
+          default:
+            break;
+        }
+        entityInBounds ? selected.push(item) : unSelected.push(item);
+      });
+      return {
+        unSelected,
+        selected
+      }
     },
     setMaxClicks: (numOfClicks: number) => {
       self.maxClicksAllowed = numOfClicks;

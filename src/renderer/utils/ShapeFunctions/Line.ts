@@ -1,6 +1,8 @@
+import { Utils } from 'utils';
 import {
-  LINE_BOUNDS_PROPS,
+  BOUNDS_PROPS,
   FILLED_POINT_TYPE,
+  LINE_BOUNDS_PROPS,
   POINT_TYPE,
   TOOL_OPTIONS,
   TOOL_OPTIONS_TYPE,
@@ -23,7 +25,7 @@ const INITIAL_BOUNDS: LINE_BOUNDS_PROPS = {
   height: undefined,
   initialPoint: RESET_POINT,
   finalPoint: RESET_POINT,
-  angle:0,
+  angle: 0,
 };
 class Line implements ILineProps {
   type: TOOL_OPTIONS_TYPE = TOOL_OPTIONS.LINE;
@@ -142,11 +144,20 @@ class Line implements ILineProps {
     ctx.lineTo(endPoint[0], endPoint[1]);
     ctx.stroke();
   }
+  
+  static checkIfInBounds(bounds: BOUNDS_PROPS, entityJson: string): boolean {
+    let entityBounds = Utils.convertLineBoundsToRectangular(
+      new Line(entityJson).getBounds()
+    );
+    return Utils.checkIfWithinBounds(bounds, entityBounds);
+  }
 
   getBounds() {
     return this.bounds;
   }
 
-  constructor() {}
+  constructor(json?: string) {
+    json && json.length > 0 && this.parse(json);
+  }
 }
 export default Line;

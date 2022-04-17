@@ -35,7 +35,6 @@ class SelectBox implements ISelectBox {
   bounds: BOUNDS_PROPS = INITIAL_BOUNDS;
 
   renderShape(
-    ctx: CanvasRenderingContext2D,
     previewCtx: CanvasRenderingContext2D
   ): string {
     //clear preview
@@ -45,10 +44,9 @@ class SelectBox implements ISelectBox {
       previewCtx.canvas.width,
       previewCtx.canvas.height
     );
-    this.drawShape(ctx);
+
+    this.drawShape(previewCtx);
     //save context styles.
-    ctx.save();
-    previewCtx.save();
     //return stringified Entity
     const entityJson = this.json();
     this.#resetProperties();
