@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { EVENT_OPEN_MENU_PROPS } from './../interfaces';
 const validChannels: string[] = [
+  'save-data',
+  'import-data',
   'display-app-menu',
   'close-app-menu',
   'copied-text',

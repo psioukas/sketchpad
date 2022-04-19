@@ -145,18 +145,24 @@ app.on('new-editor-window', () => {
     });
   }
 });
+
 ipcMain.handle('save-data', (_, data) => {
-  mainWindow &&
-    dialog
-      .showOpenDialog(mainWindow, {
-        title: 'Show dir',
-        properties: ['openDirectory'],
-      })
-      .then((res) => {
-        console.log(res)
-        res.filePaths.length === 1 &&
-          fs.writeFileSync(res.filePaths[0] + '/filexx.txt', data, 'utf-8');
-      });
+  if (mainWindow) {
+    let filePath = dialog.showSaveDialogSync(mainWindow, {
+      title: 'Choose where to save file',
+      buttonLabel: 'Save',
+      defaultPath: './',
+      filters: [
+        {
+          name: 'json',
+          extensions: ['json'],
+        },
+      ],
+      properties: ['showOverwriteConfirmation'],
+    });
+    if (filePath && filePath.length > 0)
+      fs.writeFileSync(filePath, data, 'utf-8');
+  }
 });
 ipcMain.handle('close-window', (_) => {
   const windowManager = app.windowManager;

@@ -67,10 +67,11 @@ function handleResizeWindow(canvasRefs: RefObject<HTMLCanvasElement>[]) {
   canvasRefs.forEach((canvasRef) => {
     if (canvasRef.current) {
       canvasRef.current.width = window.innerWidth;
-      canvasRef.current.height = window.innerHeight;
+      canvasRef.current.height = window.innerHeight - 70;
     }
   });
 }
+
 function addListeners(canvasRefs: RefObject<HTMLCanvasElement>[]) {
   window.addEventListener('wheel', handleMouseWheel);
   window.addEventListener('resize', () => handleResizeWindow(canvasRefs));
@@ -123,6 +124,36 @@ const Sketchpad = () => {
   const drawContext = useRef<CanvasRenderingContext2D | null>(null);
   const mouseContext = useRef<CanvasRenderingContext2D | null>(null);
 
+  function handleParseImportData(data: string) {
+    if (data && data.length > 0) {
+      let entities = JSON.parse(data) as IEntity[];
+      handleImportFromStorage(entities);
+    }
+  }
+
+  function handleImportFromStorage(elements: IEntity[]) {
+    elements.forEach((item: IEntity) => {
+      let entity: Circle | Rectangle | Line | null = null;
+      if (context.current) {
+        switch (item.type) {
+          case TOOL_OPTIONS.CIRCLE:
+            entity = new Circle(item.entity);
+            entity.drawShape(context.current);
+            break;
+          case TOOL_OPTIONS.RECTANGLE:
+            entity = new Rectangle(item.entity);
+            entity.drawShape(context.current);
+            break;
+          case TOOL_OPTIONS.LINE:
+            entity = new Line(item.entity);
+            break;
+          default:
+            break;
+        }
+        if (entity) entity.drawShape(context.current);
+      }
+    });
+  }
   useEffect(() => {
     if (canvas.current && drawCanvas.current && mouseCanvas.current) {
       canvas.current.width = innerWidth;
@@ -157,7 +188,15 @@ const Sketchpad = () => {
         _drawContext.lineWidth = 2;
         drawContext.current = _drawContext;
       }
+
+      window.electron.ipcRenderer.on('import-data', handleParseImportData);
     }
+    return () => {
+      window.electron.ipcRenderer.removeListener(
+        'import-data',
+        handleParseImportData
+      );
+    };
   }, []);
 
   //Shape mutable ref init
@@ -495,36 +534,6 @@ const Sketchpad = () => {
     if (toolName && TOOL_OPTIONS[toolName] === TOOL_OPTIONS.BRUSH_SIZE_PICKER)
       store.toggleDisplayBrush();
   };
-  function handleImportFromStorage(e: React.MouseEvent) {
-    window.electron.ipcRenderer.saveData(JSON.stringify(store.elements,null,2));
-    clearCanvas();
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDrawing(false);
-    setTimeout(() => {
-      store.elements.forEach((item: IEntity) => {
-        let entity: Circle | Rectangle | Line | null = null;
-        if (context.current) {
-          switch (item.type) {
-            case TOOL_OPTIONS.CIRCLE:
-              entity = new Circle(item.entity);
-              entity.drawShape(context.current);
-              break;
-            case TOOL_OPTIONS.RECTANGLE:
-              entity = new Rectangle(item.entity);
-              entity.drawShape(context.current);
-              break;
-            case TOOL_OPTIONS.LINE:
-              entity = new Line(item.entity);
-              break;
-            default:
-              break;
-          }
-          if (entity) entity.drawShape(context.current);
-        }
-      }, 3000);
-    });
-  }
 
   function handleCircleCreation(offsetX: number, offsetY: number) {
     switch (true) {
@@ -678,7 +687,6 @@ const Sketchpad = () => {
         ref={canvas}
         onMouseDown={startDrawing}
         onMouseUp={stopDrawing}
-        onContextMenu={handleImportFromStorage}
       />
       <canvas
         id="drawCanvas"
@@ -686,14 +694,8 @@ const Sketchpad = () => {
         onMouseDown={startDrawing}
         onMouseUp={stopDrawing}
         onMouseMove={mouseMove}
-        onContextMenu={handleImportFromStorage}
       />
-      <canvas
-        id="mouseCanvas"
-        ref={mouseCanvas}
-        onMouseMove={mouseMove}
-        onContextMenu={handleImportFromStorage}
-      />
+      <canvas id="mouseCanvas" ref={mouseCanvas} onMouseMove={mouseMove} />
     </div>
   );
 };

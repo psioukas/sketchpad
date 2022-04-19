@@ -2,10 +2,12 @@ import {
   app,
   BrowserWindow,
   dialog,
+  ipcRenderer,
   Menu,
   MenuItemConstructorOptions,
   shell,
 } from 'electron';
+import fs from 'fs'
 import { MENU_OPTIONS, MENU_OPTION_TYPE } from './../interfaces';
 import { WindowManager } from './WindowManager';
 
@@ -57,6 +59,26 @@ export default class MenuBuilder {
             buttonLabel: 'Import file',
             title: 'whatever',
             filters: [{ name: 'Images', extensions: ['*'] }],
+          });
+        },
+      },
+      {
+        label: 'Import data from json',
+        accelerator:'I',
+        click: () => {
+          dialog.showOpenDialog(window, {
+            buttonLabel: 'Import Json',
+            filters: [{ name: 'Json', extensions: ['json'] }],
+          }).then(res=>{
+            if(res.filePaths.length ===1){
+              try {
+                let fileContents = fs.readFileSync(res.filePaths[0],'utf-8',);
+                let window = this.windowManager.getCurrentWindow()
+                if(window)window.webContents.send('import-data',fileContents);
+              } catch (error) {
+                console.error(error)
+              }
+            }
           });
         },
       },
