@@ -67,7 +67,7 @@ export interface EVENT_CONTEXT_MENU_PROPS {
   x: number;
   y: number;
 }
-export interface EVENT_CONTEXT_MENU_PROPS_WITH_TYPE {
+export interface EVENT_OPEN_MENU_PROPS {
   x: number;
   y: number;
   type: MENU_OPTION_TYPE;

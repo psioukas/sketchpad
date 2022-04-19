@@ -41,7 +41,11 @@ class Circle implements ICircleProps {
     ctx: CanvasRenderingContext2D,
     previewCtx: CanvasRenderingContext2D
   ): string {
+    //save context styles.
+    ctx.save();
+    previewCtx.save();
     //clear preview
+    console.log({ctx})
     previewCtx.clearRect(
       0,
       0,
@@ -50,9 +54,8 @@ class Circle implements ICircleProps {
     );
     //render circle
     this.drawShape(ctx);
-    //save context styles.
-    ctx.save();
-    previewCtx.save();
+    ctx.restore();
+    previewCtx.restore();
     //return stringified Entity
     const entityJson = this.json();
     this.#resetProperties();

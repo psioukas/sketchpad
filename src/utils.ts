@@ -94,20 +94,22 @@ export class Utils {
       bottom: Math.max(testPoints.start[1], testPoints.end[1]),
     };
 
-    switch (true) {
-      // check horizontal axis bounds
-      case testCoordinates.left < boundingBoxCoordinates.left ||
-        testCoordinates.right > boundingBoxCoordinates.right:
-        return false;
-
+    // check horizontal axis bounds
+    if (
+      testCoordinates.left < boundingBoxCoordinates.left ||
+      testCoordinates.right > boundingBoxCoordinates.right
+    ) {
+      return false;
+    } else if (
+      testCoordinates.top < boundingBoxCoordinates.top ||
+      testCoordinates.bottom > boundingBoxCoordinates.bottom
+    ) {
       // check vertical axis bounds
-      case testCoordinates.top < boundingBoxCoordinates.top ||
-        testCoordinates.bottom > boundingBoxCoordinates.bottom:
-        return false;
-      default:
-        return true;
+      return false;
     }
+    return true;
   }
+
   static drawShapes(array: IEntity[], ctx: CanvasRenderingContext2D) {
     array.forEach((item) => {
       switch (item.type) {

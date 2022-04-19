@@ -6,7 +6,7 @@ declare global {
   interface Window {
     electron: {
       ipcRenderer: {
-
+        saveData: (data:string) => void;
         minimizeWindow: () => void;
         maximizeWindow: () => void;
         closeWindow: () => void;

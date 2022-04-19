@@ -3,18 +3,18 @@ import {
   ListItemProps,
   styled,
   Theme,
-  useTheme
+  useTheme,
 } from '@mui/material';
 import { BOUNDS_PROPS, TOOL_OPTIONS } from 'interfaces';
 import { observer } from 'mobx-react-lite';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { RefObject, useEffect, useRef, useState } from 'react';
 import { IEntity, ToolStore } from 'store/Store';
 import { Utils } from 'utils';
 import {
   Circle,
   Line,
   Rectangle,
-  SelectBox
+  SelectBox,
 } from '../../utils/ShapeFunctions/index';
 
 interface SketchpadButtonProps extends ListItemProps {
@@ -63,11 +63,21 @@ function handleMouseWheel(e: WheelEvent) {
       return ToolStore.cycleDown();
   }
 }
-function addListeners() {
-  window.addEventListener('wheel', handleMouseWheel);
+function handleResizeWindow(canvasRefs: RefObject<HTMLCanvasElement>[]) {
+  canvasRefs.forEach((canvasRef) => {
+    if (canvasRef.current) {
+      canvasRef.current.width = window.innerWidth;
+      canvasRef.current.height = window.innerHeight;
+    }
+  });
 }
-function removeListeners() {
+function addListeners(canvasRefs: RefObject<HTMLCanvasElement>[]) {
   window.addEventListener('wheel', handleMouseWheel);
+  window.addEventListener('resize', () => handleResizeWindow(canvasRefs));
+}
+function removeListeners(canvasRefs: RefObject<HTMLCanvasElement>[]) {
+  window.removeEventListener('wheel', handleMouseWheel);
+  window.removeEventListener('resize', () => handleResizeWindow(canvasRefs));
 }
 interface IKeysPressed {
   [index: string]: boolean;
@@ -89,24 +99,24 @@ const Sketchpad = () => {
       console.log('Undo logic goes here!!');
   }
 
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const drawCanvas = useRef<HTMLCanvasElement>(null);
+  const mouseCanvas = useRef<HTMLCanvasElement>(null);
+
   useEffect(() => {
-    addListeners();
+    addListeners([canvas, drawCanvas, mouseCanvas]);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
-      removeListeners();
+      removeListeners([canvas, drawCanvas, mouseCanvas]);
     };
   }, []);
 
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const theme = useTheme();
   const toolWidthRef = useRef<number>(4);
-
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const drawCanvas = useRef<HTMLCanvasElement>(null);
-  const mouseCanvas = useRef<HTMLCanvasElement>(null);
 
   const context = useRef<CanvasRenderingContext2D | null>(null);
 
@@ -238,7 +248,12 @@ const Sketchpad = () => {
     }
   };
   const renderSelection = () => {
-    if (selectBox.readyToRender && context.current && drawCanvas.current &&drawContext.current) {
+    if (
+      selectBox.readyToRender &&
+      context.current &&
+      drawCanvas.current &&
+      drawContext.current
+    ) {
       setSelectionStyles();
       const entity = selectBox.renderShape(drawContext.current);
       resetSelectionStyles();
@@ -246,26 +261,32 @@ const Sketchpad = () => {
       drawContext.current.clearRect(
         0,
         0,
-        drawCanvas.current.width ,
+        drawCanvas.current.width,
         drawCanvas.current.height
       );
       let bounds: BOUNDS_PROPS = SelectBox.parseFromJSON(entity).getBounds();
-        
+
       const { selected, unSelected } = store.findSelectionElements(bounds);
-      redrawAll(selected, unSelected);
+
       selectBox.reset();
+      redrawAll(selected, unSelected);
     }
   };
 
   function redrawAll(selected: IEntity[], unselected: IEntity[]) {
     clearCanvas();
 
-    if (context.current) {
-      Utils.drawShapes(unselected, context.current);
-      context.current.strokeStyle = 'purple';
-      Utils.drawShapes(selected, context.current);
-      context.current.restore();
-    }
+    requestAnimationFrame(
+      () => context.current && Utils.drawShapes(unselected, context.current)
+    );
+    requestAnimationFrame(() => {
+      if (context.current) {
+        context.current.save();
+        context.current.strokeStyle = 'purple';
+        Utils.drawShapes(selected, context.current);
+        context.current.restore();
+      }
+    });
   }
 
   const renderCircle = () => {
@@ -426,11 +447,16 @@ const Sketchpad = () => {
 
   const mouseMove = (e: React.MouseEvent) => {
     const { offsetX, offsetY } = e.nativeEvent;
-    if(canvas.current && (offsetX < 0 || offsetX > canvas.current?.width
-      || offsetY < 0 || offsetY > canvas.current?.height)){
-        e.preventDefault()
-        e.stopPropagation();
-      }
+    if (
+      canvas.current &&
+      (offsetX < 0 ||
+        offsetX > canvas.current?.width ||
+        offsetY < 0 ||
+        offsetY > canvas.current?.height)
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     if (mouseContext.current && mouseCanvas.current) {
       mouseContext.current.clearRect(
@@ -439,11 +465,15 @@ const Sketchpad = () => {
         mouseCanvas.current.width,
         mouseCanvas.current.height
       );
-
+      const bRect = mouseCanvas.current.getBoundingClientRect();
+      const mX = e.clientX - bRect.left;
+      const mY = e.clientY - bRect.top;
       mouseContext.current.beginPath();
       mouseContext.current.rect(
-        e.nativeEvent.offsetX,
-        e.nativeEvent.offsetY,
+        // e.nativeEvent.offsetX,
+        // e.nativeEvent.offsetY,
+        mX,
+        mY,
         1,
         1
       );
@@ -466,6 +496,7 @@ const Sketchpad = () => {
       store.toggleDisplayBrush();
   };
   function handleImportFromStorage(e: React.MouseEvent) {
+    window.electron.ipcRenderer.saveData(JSON.stringify(store.elements,null,2));
     clearCanvas();
     e.preventDefault();
     e.stopPropagation();

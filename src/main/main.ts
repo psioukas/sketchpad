@@ -1,7 +1,7 @@
-import { Store } from './../store/Store';
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
+import fs from 'fs';
 import path from 'path';
 import { EVENT_OPEN_MENU_PROPS } from './../interfaces';
 import MenuBuilder from './menu';
@@ -82,7 +82,6 @@ const createWindow = async () => {
     },
   });
   if (mainWindow) {
-
     mainWindow.loadURL(resolveHtmlPath('index.html'));
     mainWindow.on('ready-to-show', () => {
       // menu = menuBuilder.buildMenu();
@@ -93,6 +92,7 @@ const createWindow = async () => {
         mainWindow.minimize();
       } else {
         mainWindow.webContents.send('switch-route', { route: 'editor' });
+
         mainWindow.show();
       }
     });
@@ -144,6 +144,19 @@ app.on('new-editor-window', () => {
       menuBuilder.setSystemContextMenu(editorWindow);
     });
   }
+});
+ipcMain.handle('save-data', (_, data) => {
+  mainWindow &&
+    dialog
+      .showOpenDialog(mainWindow, {
+        title: 'Show dir',
+        properties: ['openDirectory'],
+      })
+      .then((res) => {
+        console.log(res)
+        res.filePaths.length === 1 &&
+          fs.writeFileSync(res.filePaths[0] + '/filexx.txt', data, 'utf-8');
+      });
 });
 ipcMain.handle('close-window', (_) => {
   const windowManager = app.windowManager;

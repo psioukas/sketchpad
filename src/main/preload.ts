@@ -10,6 +10,9 @@ const validChannels: string[] = [
 
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
+    saveData: (data:string) => {
+      ipcRenderer.invoke('save-data',data)
+    },
     minimizeWindow: () => {
       ipcRenderer.invoke('minimize-window')
     },

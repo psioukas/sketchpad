@@ -22,36 +22,10 @@ const Hello = observer(() => {
       <div className="Hello flexColumn">
         <img width="200px" alt="icon" src={icon} ref={anchorRef} />
 
-        <h1>electron-react-boilerplate</h1>
+        <h1>skethpad</h1>
       </div>
-      <div className="Hello">
-        <a
-          href="https://electron-react-boilerplate.js.org/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="books">
-              📚
-            </span>
-            Read our docs
-          </button>
-        </a>
-        <span>{`Copied text: ${copiedText}`}</span>
 
-        <a
-          href="https://github.com/sponsors/electron-react-boilerplate"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="books">
-              🙏
-            </span>
-            Donate
-          </button>
-        </a>
-      </div>
+      <span>{`Copied text: ${copiedText}`}</span>
     </div>
   );
 });
