@@ -2,7 +2,7 @@ import { reaction } from 'mobx';
 import { Instance, SnapshotOut, types } from 'mobx-state-tree';
 import { Circle, Line, Rectangle } from 'renderer/utils/ShapeFunctions';
 import { v4 as uuid } from 'uuid';
-import { BOUNDS_PROPS, TOOL_OPTIONS, TOOL_OPTIONS_TYPE } from './../interfaces';
+import { BOUNDS_PROPS, TOOL_OPTIONS, TOOL_OPTIONS_TYPE } from '../interfaces';
 
 const EntitiesStore = types.model({
   id: types.string,
@@ -13,38 +13,16 @@ const EntitiesStore = types.model({
     types.literal(TOOL_OPTIONS.LINE)
   ),
   styles: types.array(types.string),
-  // circles: types.array(
-  //   types.model({
-  //     id: types.string,
-  //     entity: types.string,
-  //     type: TOOL_OPTIONS.CIRCLE,
-  //     styles: types.array(types.string),
-  //   })
-  // ),
-  // rectangles: types.array(
-  //   types.model({
-  //     id: types.string,
-  //     entity: types.string,
-  //     type: TOOL_OPTIONS.RECTANGLE,
-  //     styles: types.array(types.string),
-  //   })
-  // ),
-  // lines: types.array(
-  //   types.model({
-  //     id: types.string,
-  //     entity: types.string,
-  //     type: TOOL_OPTIONS.LINE,
-  //     styles: types.array(types.string),
-  //   })
-  // ),
 });
 
 export type EntitiesStoreType = Instance<typeof EntitiesStore>;
-export interface IEntity extends SnapshotOut<typeof EntitiesStore>{}
-export type EntitiesType =
-   (CircleEntitiesType
+export type IEntity = SnapshotOut<typeof EntitiesStore>;
+
+export type EntitiesType = (
+  | CircleEntitiesType
   | RectangleEntitiesType
-  | LineEntitiesType) [];
+  | LineEntitiesType
+)[];
 export type CircleEntitiesType = {
   id: string;
   entity: string;
@@ -149,9 +127,9 @@ export const ToolStore = types
     findSelectionElements: (
       bounds: BOUNDS_PROPS
     ): { unSelected: IEntity[]; selected: IEntity[] } => {
-        let unSelected: IEntity[] = [];
-        let selected: IEntity[] = [];
-      self.elements.forEach((item:IEntity) => {
+      const unSelected: IEntity[] = [];
+      const selected: IEntity[] = [];
+      self.elements.forEach((item: IEntity) => {
         let entityInBounds = false;
         switch (item.type) {
           case TOOL_OPTIONS.CIRCLE:
@@ -166,18 +144,23 @@ export const ToolStore = types
           default:
             break;
         }
-        entityInBounds ? selected.push(item) : unSelected.push(item);
+
+        if (entityInBounds) {
+          selected.push(item);
+        } else {
+          unSelected.push(item);
+        }
       });
       return {
         unSelected,
-        selected
-      }
+        selected,
+      };
     },
     setMaxClicks: (numOfClicks: number) => {
       self.maxClicksAllowed = numOfClicks;
     },
     incrementClicks: () => {
-      self.clicks++;
+      self.clicks += 1;
     },
     resetClicks: () => {
       self.clicks = 0;
@@ -200,11 +183,11 @@ export const ToolStore = types
 reaction(
   () => ToolStore.current,
   () => {
-    let maxClicks = 2;
-    ToolStore.setMaxClicks(maxClicks);
+    ToolStore.setMaxClicks(2);
   }
 );
 type ToolStoreType = typeof ToolStore;
 
-interface ToolStoreTypeInterface extends ToolStoreType {}
-export interface ToolStoreInterface extends Instance<ToolStoreTypeInterface> {}
+type ToolStoreTypeInterface = ToolStoreType;
+
+export type ToolStoreInterface = Instance<ToolStoreTypeInterface>;

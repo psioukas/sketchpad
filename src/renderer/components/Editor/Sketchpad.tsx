@@ -22,6 +22,7 @@ interface SketchpadButtonProps extends ListItemProps {
   enabled: boolean;
   theme: Theme;
 }
+
 const CanvasToolButton = styled(ListItem, {
   shouldForwardProp: (prop) => prop !== 'enabled' && prop !== 'rotate',
 })(({ enabled, theme, ...props }: SketchpadButtonProps) => ({
@@ -54,15 +55,17 @@ const CanvasToolButton = styled(ListItem, {
     zIndex: 3000,
   },
 }));
+
 function handleMouseWheel(e: WheelEvent) {
   const direction = e.deltaY;
-  switch (true) {
-    case direction > 0:
-      return ToolStore.cycleUp();
-    case direction < 0:
-      return ToolStore.cycleDown();
+
+  if (direction > 0) {
+    return ToolStore.cycleUp();
   }
+
+  return ToolStore.cycleDown();
 }
+
 function handleResizeWindow(canvasRefs: RefObject<HTMLCanvasElement>[]) {
   canvasRefs.forEach((canvasRef) => {
     if (canvasRef.current) {
@@ -76,10 +79,12 @@ function addListeners(canvasRefs: RefObject<HTMLCanvasElement>[]) {
   window.addEventListener('wheel', handleMouseWheel);
   window.addEventListener('resize', () => handleResizeWindow(canvasRefs));
 }
+
 function removeListeners(canvasRefs: RefObject<HTMLCanvasElement>[]) {
   window.removeEventListener('wheel', handleMouseWheel);
   window.removeEventListener('resize', () => handleResizeWindow(canvasRefs));
 }
+
 interface IKeysPressed {
   [index: string]: boolean;
 }
@@ -92,12 +97,14 @@ const Sketchpad = () => {
     e.preventDefault();
     delete keysPressed.current[e.key];
   }
+
   function handleKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     const { key, ctrlKey } = e;
     keysPressed.current[key] = true;
-    if (keysPressed.current['z'] && ctrlKey)
+    if (keysPressed.current.z && ctrlKey) {
       console.log('Undo logic goes here!!');
+    }
   }
 
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -119,30 +126,23 @@ const Sketchpad = () => {
   const theme = useTheme();
   const toolWidthRef = useRef<number>(4);
 
-  const context = useRef<CanvasRenderingContext2D | null>(null);
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  const drawContext = useRef<CanvasRenderingContext2D | null>(null);
-  const mouseContext = useRef<CanvasRenderingContext2D | null>(null);
-
-  function handleParseImportData(data: string) {
-    if (data && data.length > 0) {
-      let entities = JSON.parse(data) as IEntity[];
-      handleImportFromStorage(entities);
-    }
-  }
+  const drawContextRef = useRef<CanvasRenderingContext2D | null>(null);
+  const mouseContextRef = useRef<CanvasRenderingContext2D | null>(null);
 
   function handleImportFromStorage(elements: IEntity[]) {
     elements.forEach((item: IEntity) => {
       let entity: Circle | Rectangle | Line | null = null;
-      if (context.current) {
+      if (contextRef.current) {
         switch (item.type) {
           case TOOL_OPTIONS.CIRCLE:
             entity = new Circle(item.entity);
-            entity.drawShape(context.current);
+            entity.drawShape(contextRef.current);
             break;
           case TOOL_OPTIONS.RECTANGLE:
             entity = new Rectangle(item.entity);
-            entity.drawShape(context.current);
+            entity.drawShape(contextRef.current);
             break;
           case TOOL_OPTIONS.LINE:
             entity = new Line(item.entity);
@@ -150,43 +150,52 @@ const Sketchpad = () => {
           default:
             break;
         }
-        if (entity) entity.drawShape(context.current);
+        if (entity) entity.drawShape(contextRef.current);
       }
     });
   }
+
   useEffect(() => {
+    function handleParseImportData(data: string) {
+      if (data && data.length > 0) {
+        const entities = JSON.parse(data) as IEntity[];
+        handleImportFromStorage(entities);
+      }
+    }
+
     if (canvas.current && drawCanvas.current && mouseCanvas.current) {
-      canvas.current.width = innerWidth;
-      canvas.current.height = innerHeight - 70;
-      const _context: CanvasRenderingContext2D | null =
+      canvas.current.width = window.innerWidth;
+      canvas.current.height = window.innerHeight - 70;
+
+      const context: CanvasRenderingContext2D | null =
         canvas.current.getContext('2d');
-      if (_context) {
-        _context.lineCap = 'round';
-        _context.strokeStyle = 'black';
-        _context.lineWidth = 4;
-        context.current = _context;
+      if (context) {
+        context.lineCap = 'round';
+        context.strokeStyle = 'black';
+        context.lineWidth = 4;
+        contextRef.current = context;
       }
 
-      mouseCanvas.current.width = innerWidth;
-      mouseCanvas.current.height = innerHeight - 70;
-      const _mouseContext: CanvasRenderingContext2D | null =
+      mouseCanvas.current.width = window.innerWidth;
+      mouseCanvas.current.height = window.innerHeight - 70;
+      const mouseContext: CanvasRenderingContext2D | null =
         mouseCanvas.current.getContext('2d');
-      if (_mouseContext) {
-        _mouseContext.lineCap = 'round';
-        _mouseContext.strokeStyle = 'blue';
-        _mouseContext.lineWidth = 4;
-        mouseContext.current = _mouseContext;
+      if (mouseContext) {
+        mouseContext.lineCap = 'round';
+        mouseContext.strokeStyle = 'blue';
+        mouseContext.lineWidth = 4;
+        mouseContextRef.current = mouseContext;
       }
 
-      drawCanvas.current.width = innerWidth;
-      drawCanvas.current.height = innerHeight - 70;
-      const _drawContext: CanvasRenderingContext2D | null =
+      drawCanvas.current.width = window.innerWidth;
+      drawCanvas.current.height = window.innerHeight - 70;
+      const drawContext: CanvasRenderingContext2D | null =
         drawCanvas.current.getContext('2d');
-      if (_drawContext) {
-        _drawContext.lineCap = 'round';
-        _drawContext.strokeStyle = 'rgba(0,0,0,0.4)';
-        _drawContext.lineWidth = 2;
-        drawContext.current = _drawContext;
+      if (drawContext) {
+        drawContext.lineCap = 'round';
+        drawContext.strokeStyle = 'rgba(0,0,0,0.4)';
+        drawContext.lineWidth = 2;
+        drawContextRef.current = drawContext;
       }
 
       window.electron.ipcRenderer.on('import-data', handleParseImportData);
@@ -199,7 +208,7 @@ const Sketchpad = () => {
     };
   }, []);
 
-  //Shape mutable ref init
+  // Shape mutable ref init
   const circleRef = useRef<Circle>(new Circle());
   const lineRef = useRef<Line>(new Line());
   const selectBoxRef = useRef<SelectBox>(new SelectBox());
@@ -211,99 +220,194 @@ const Sketchpad = () => {
   const selectBox = selectBoxRef.current;
 
   const setToolWidth = (value: number) => {
-    if (context.current && drawContext.current) {
+    if (contextRef.current && drawContextRef.current) {
       toolWidthRef.current = Number(value);
 
-      context.current.lineWidth = Number(value);
-      drawContext.current.lineWidth = Number(value);
+      contextRef.current.lineWidth = Number(value);
+      drawContextRef.current.lineWidth = Number(value);
 
-      drawContext.current.save();
-      context.current.save();
+      drawContextRef.current.save();
+      contextRef.current.save();
     }
   };
 
-  function clearDrawCanvas() {
-    if (canvas.current && drawContext.current) {
-      const canvasWidth = canvas.current.width;
-      const canvasHeight = canvas.current.height;
-      drawContext.current.clearRect(0, 0, canvasWidth, canvasHeight);
+  const handleToolSelection = (e: React.MouseEvent<HTMLLIElement>) => {
+    if (e.target !== e.currentTarget) return;
+    const toolName = Object.values(TOOL_OPTIONS).find(
+      (tool) => tool === e.currentTarget.id
+    );
+
+    if (store.current === toolName) {
+      store.clearTool();
+    } else if (toolName) {
+      store.setTool(toolName);
+    }
+    if (toolName && TOOL_OPTIONS[toolName] === TOOL_OPTIONS.BRUSH_SIZE_PICKER)
+      store.toggleDisplayBrush();
+  };
+
+  function handleCircleCreation(offsetX: number, offsetY: number) {
+    if (!circle.readyToRender) {
+      if (!circle.centerPointSet) {
+        circle.setCenterPoint(offsetX, offsetY);
+      }
+      if (circle.centerPointSet && !circle.outerPointSet) {
+        circle.setOuterPoint(offsetX, offsetY);
+        circle.setReadyToRender = true;
+        setIsDrawing(false);
+      }
     }
   }
-  function clearCanvas() {
-    if (canvas.current && context.current && drawContext.current) {
+
+  function handleRectangleCreation(offsetX: number, offsetY: number) {
+    if (!rectangle.readyToRender) {
+      if (!rectangle.initialPointSet) {
+        rectangle.setInitialPoint(offsetX, offsetY);
+      }
+      if (rectangle.initialPointSet && !rectangle.finalPointSet) {
+        rectangle.setFinalPoint(offsetX, offsetY);
+        rectangle.setReadyToRender = true;
+        setIsDrawing(false);
+      }
+    }
+  }
+
+  function handleLineCreation(offsetX: number, offsetY: number) {
+    if (!line.readyToRender) {
+      if (!line.initialPointSet) {
+        line.setInitialPoint(offsetX, offsetY);
+      }
+      if (line.initialPointSet && !line.finalPointSet) {
+        line.setFinalPoint(offsetX, offsetY);
+        line.setReadyToRender = true;
+        setIsDrawing(false);
+      }
+    }
+  }
+
+  function handleSelectCreation(offsetX: number, offsetY: number) {
+    if (!selectBox.readyToRender) {
+      if (!selectBox.initialPointSet) {
+        selectBox.setInitialPoint(offsetX, offsetY);
+      } else if (selectBox.initialPointSet && !selectBox.finalPointSet) {
+        selectBox.setFinalPoint(offsetX, offsetY);
+        selectBox.setReadyToRender = true;
+        setIsDrawing(false);
+      }
+    }
+  }
+
+  const handleToolWidthChange = (
+    e: React.FocusEvent<HTMLInputElement>
+  ): void => {
+    const { valueAsNumber } = e.target;
+    e.preventDefault();
+    e.stopPropagation();
+    setToolWidth(valueAsNumber);
+  };
+
+  function clearDrawCanvas() {
+    if (canvas.current && drawContextRef.current) {
       const canvasWidth = canvas.current.width;
       const canvasHeight = canvas.current.height;
-      context.current.clearRect(0, 0, canvasWidth, canvasHeight);
-      drawContext.current.clearRect(0, 0, canvasWidth, canvasHeight);
+      drawContextRef.current.clearRect(0, 0, canvasWidth, canvasHeight);
+    }
+  }
+
+  function clearCanvas() {
+    if (canvas.current && contextRef.current && drawContextRef.current) {
+      const canvasWidth = canvas.current.width;
+      const canvasHeight = canvas.current.height;
+      contextRef.current.clearRect(0, 0, canvasWidth, canvasHeight);
+      drawContextRef.current.clearRect(0, 0, canvasWidth, canvasHeight);
       circleRef.current = new Circle();
       lineRef.current = new Line();
       rectangleRef.current = new Rectangle();
     }
   }
 
-  function createCanvasScreenshot(
-    _canvas: HTMLCanvasElement,
-    _context: CanvasRenderingContext2D
-  ): Promise<void> {
-    const canvasWidth = _canvas.width;
-    const canvasHeight = _canvas.height;
-    const drawingsImage = new Image(canvasWidth, canvasHeight);
-    const blankCanvasImage = new Image(canvasWidth, canvasHeight);
+  // function createCanvasScreenshot(
+  //   _canvas: HTMLCanvasElement,
+  //   _context: CanvasRenderingContext2D
+  // ): Promise<void> {
+  //   const canvasWidth = _canvas.width;
+  //   const canvasHeight = _canvas.height;
+  //   const drawingsImage = new Image(canvasWidth, canvasHeight);
+  //   const blankCanvasImage = new Image(canvasWidth, canvasHeight);
+  //
+  //   const drawingsImageDataUrl = _canvas.toDataURL('image/png');
+  //   _context.fillStyle = 'white';
+  //   _context.fillRect(0, 0, canvasWidth, canvasHeight);
+  //   const blankCanvasImageDataUrl = _canvas.toDataURL('image/png');
+  //
+  //   clearCanvas();
+  //
+  //   drawingsImage.src = drawingsImageDataUrl;
+  //   blankCanvasImage.src = blankCanvasImageDataUrl;
+  //   return new Promise((resolve, reject) => {
+  //     try {
+  //       drawingsImage.onload = () => {
+  //         blankCanvasImage.onload = () => {
+  //           _context.drawImage(blankCanvasImage, 0, 0);
+  //           _context.drawImage(drawingsImage, 0, 0);
+  //           resolve();
+  //         };
+  //       };
+  //     } catch (error) {
+  //       reject(error);
+  //     }
+  //   });
+  // }
 
-    const drawingsImageDataUrl = _canvas.toDataURL('image/png');
-    _context.fillStyle = 'white';
-    _context.fillRect(0, 0, canvasWidth, canvasHeight);
-    const blankCanvasImageDataUrl = _canvas.toDataURL('image/png');
-
-    clearCanvas();
-
-    drawingsImage.src = drawingsImageDataUrl;
-    blankCanvasImage.src = blankCanvasImageDataUrl;
-    return new Promise((resolve, reject) => {
-      try {
-        drawingsImage.onload = () => {
-          blankCanvasImage.onload = () => {
-            _context.drawImage(blankCanvasImage, 0, 0);
-            _context.drawImage(drawingsImage, 0, 0);
-            resolve();
-          };
-        };
-      } catch (error) {
-        reject({ error });
-      }
-    });
-  }
   const setSelectionStyles = () => {
-    if (drawContext.current) {
-      drawContext.current.save();
-      drawContext.current.strokeStyle = 'rgba(0,0,0,0.45)';
-      drawContext.current.lineWidth = 1;
-      drawContext.current.setLineDash([2, 4, 6, 10]);
+    if (drawContextRef.current) {
+      drawContextRef.current.save();
+      drawContextRef.current.strokeStyle = 'rgba(0,0,0,0.45)';
+      drawContextRef.current.lineWidth = 1;
+      drawContextRef.current.setLineDash([2, 4, 6, 10]);
     }
   };
   const resetSelectionStyles = () => {
-    if (drawContext.current) {
-      drawContext.current.restore();
+    if (drawContextRef.current) {
+      drawContextRef.current.restore();
     }
   };
+
+  function redrawAll(selected: IEntity[], unselected: IEntity[]) {
+    clearCanvas();
+
+    requestAnimationFrame(
+      () =>
+        contextRef.current && Utils.drawShapes(unselected, contextRef.current)
+    );
+    requestAnimationFrame(() => {
+      if (contextRef.current) {
+        contextRef.current.save();
+        contextRef.current.strokeStyle = 'purple';
+        Utils.drawShapes(selected, contextRef.current);
+        contextRef.current.restore();
+      }
+    });
+  }
+
   const renderSelection = () => {
     if (
       selectBox.readyToRender &&
-      context.current &&
+      contextRef.current &&
       drawCanvas.current &&
-      drawContext.current
+      drawContextRef.current
     ) {
       setSelectionStyles();
-      const entity = selectBox.renderShape(drawContext.current);
+      const entity = selectBox.renderShape(drawContextRef.current);
       resetSelectionStyles();
       clearDrawCanvas();
-      drawContext.current.clearRect(
+      drawContextRef.current.clearRect(
         0,
         0,
         drawCanvas.current.width,
         drawCanvas.current.height
       );
-      let bounds: BOUNDS_PROPS = SelectBox.parseFromJSON(entity).getBounds();
+      const bounds: BOUNDS_PROPS = SelectBox.parseFromJSON(entity).getBounds();
 
       const { selected, unSelected } = store.findSelectionElements(bounds);
 
@@ -312,68 +416,62 @@ const Sketchpad = () => {
     }
   };
 
-  function redrawAll(selected: IEntity[], unselected: IEntity[]) {
-    clearCanvas();
-
-    requestAnimationFrame(
-      () => context.current && Utils.drawShapes(unselected, context.current)
-    );
-    requestAnimationFrame(() => {
-      if (context.current) {
-        context.current.save();
-        context.current.strokeStyle = 'purple';
-        Utils.drawShapes(selected, context.current);
-        context.current.restore();
-      }
-    });
-  }
-
   const renderCircle = () => {
-    if (circle.readyToRender && context.current && drawContext.current) {
-      const entity = circle.renderShape(context.current, drawContext.current);
+    if (circle.readyToRender && contextRef.current && drawContextRef.current) {
+      const entity = circle.renderShape(
+        contextRef.current,
+        drawContextRef.current
+      );
       store.addElement(entity, TOOL_OPTIONS.CIRCLE);
     }
   };
 
   const renderRect = () => {
-    if (rectangle.readyToRender && context.current && drawContext.current) {
+    if (
+      rectangle.readyToRender &&
+      contextRef.current &&
+      drawContextRef.current
+    ) {
       const entity = rectangle.renderShape(
-        context.current,
-        drawContext.current
+        contextRef.current,
+        drawContextRef.current
       );
       store.addElement(entity, TOOL_OPTIONS.RECTANGLE);
     }
   };
   const renderLine = () => {
-    if (line.readyToRender && context.current && drawContext.current) {
-      const entity = line.renderShape(context.current, drawContext.current);
+    if (line.readyToRender && contextRef.current && drawContextRef.current) {
+      const entity = line.renderShape(
+        contextRef.current,
+        drawContextRef.current
+      );
       store.addElement(entity, TOOL_OPTIONS.LINE);
     }
   };
 
-  const handleCreateScreenshot = async () => {
-    if (canvas.current && context.current && drawContext.current) {
-      try {
-        await createCanvasScreenshot(canvas.current, context.current);
+  // const handleCreateScreenshot = async () => {
+  //   if (canvas.current && contextRef.current && drawContextRef.current) {
+  //     try {
+  //       await createCanvasScreenshot(canvas.current, contextRef.current);
+  //
+  //       const canvasImage = canvas.current.toDataURL('image/png');
+  //
+  //       downloadScreenshot(canvasImage, `Screenshot ${Date.now()}`);
+  //     } catch (error) {
+  //       console.log(error);
+  //     }
+  //   }
+  // };
 
-        const canvasImage = canvas.current.toDataURL('image/png');
-
-        downloadScreenshot(canvasImage, `Screenshot ${Date.now()}`);
-      } catch (error) {
-        console.log(error);
-      }
-    }
-  };
-
-  function downloadScreenshot(canvasImage: string, screenshotName: string) {
-    const downloadElement = document.createElement('a');
-    downloadElement.download = screenshotName + '.png';
-    downloadElement.href = canvasImage;
-
-    document.body.appendChild(downloadElement);
-    downloadElement.click();
-    document.body.removeChild(downloadElement);
-  }
+  // function downloadScreenshot(canvasImage: string, screenshotName: string) {
+  //   const downloadElement = document.createElement('a');
+  //   downloadElement.download = screenshotName + '.png';
+  //   downloadElement.href = canvasImage;
+  //
+  //   document.body.appendChild(downloadElement);
+  //   downloadElement.click();
+  //   document.body.removeChild(downloadElement);
+  // }
 
   const startDrawing = (e: React.MouseEvent) => {
     if (!isDrawing) setIsDrawing(true);
@@ -408,15 +506,16 @@ const Sketchpad = () => {
   };
 
   const stopDrawing = (e: React.MouseEvent) => {
-    if (drawCanvas.current && context.current && drawContext.current) {
+    if (drawCanvas.current && contextRef.current && drawContextRef.current) {
       if (isDrawing) return;
       if (e.button === 2) return;
-      drawContext.current.clearRect(
+      drawContextRef.current.clearRect(
         0,
         0,
         drawCanvas.current.width,
         drawCanvas.current.height
       );
+
       switch (store.current) {
         case TOOL_OPTIONS.SELECT_BOX:
           renderSelection();
@@ -425,14 +524,18 @@ const Sketchpad = () => {
           renderLine();
           break;
         case TOOL_OPTIONS.RECTANGLE:
-          return renderRect();
+          renderRect();
+          break;
         case TOOL_OPTIONS.CIRCLE:
-          return renderCircle();
+          renderCircle();
+          break;
+        default:
+          break;
       }
     }
   };
   const draw = (offsetX: number, offsetY: number) => {
-    if (drawContext.current && context.current) {
+    if (drawContextRef.current && contextRef.current) {
       switch (store.current) {
         case TOOL_OPTIONS.SELECT_BOX:
           if (
@@ -442,7 +545,7 @@ const Sketchpad = () => {
           ) {
             setSelectionStyles();
             selectBox.setDrawingFinalPoint(offsetX, offsetY);
-            selectBox.renderPreview(drawContext.current);
+            selectBox.renderPreview(drawContextRef.current);
             resetSelectionStyles();
           }
           break;
@@ -454,7 +557,9 @@ const Sketchpad = () => {
           ) {
             circle.setDrawingOuterPoint(offsetX, offsetY);
 
-            drawContext.current && circle.renderPreview(drawContext.current);
+            if (drawContextRef.current) {
+              circle.renderPreview(drawContextRef.current);
+            }
           }
 
           break;
@@ -466,7 +571,9 @@ const Sketchpad = () => {
           ) {
             rectangle.setDrawingFinalPoint(offsetX, offsetY);
 
-            drawContext.current && rectangle.renderPreview(drawContext.current);
+            if (drawContextRef.current) {
+              rectangle.renderPreview(drawContextRef.current);
+            }
           }
           break;
         case TOOL_OPTIONS.LINE:
@@ -477,8 +584,12 @@ const Sketchpad = () => {
           ) {
             line.setDrawingFinalPoint(offsetX, offsetY);
 
-            drawContext.current && line.renderPreview(drawContext.current);
+            if (drawContextRef.current) {
+              line.renderPreview(drawContextRef.current);
+            }
           }
+          break;
+        default:
           break;
       }
     }
@@ -497,8 +608,8 @@ const Sketchpad = () => {
       e.stopPropagation();
     }
 
-    if (mouseContext.current && mouseCanvas.current) {
-      mouseContext.current.clearRect(
+    if (mouseContextRef.current && mouseCanvas.current) {
+      mouseContextRef.current.clearRect(
         0,
         0,
         mouseCanvas.current.width,
@@ -507,8 +618,8 @@ const Sketchpad = () => {
       const bRect = mouseCanvas.current.getBoundingClientRect();
       const mX = e.clientX - bRect.left;
       const mY = e.clientY - bRect.top;
-      mouseContext.current.beginPath();
-      mouseContext.current.rect(
+      mouseContextRef.current.beginPath();
+      mouseContextRef.current.rect(
         // e.nativeEvent.offsetX,
         // e.nativeEvent.offsetY,
         mX,
@@ -516,95 +627,9 @@ const Sketchpad = () => {
         1,
         1
       );
-      mouseContext.current.stroke();
+      mouseContextRef.current.stroke();
     }
     if (isDrawing) draw(offsetX, offsetY);
-  };
-  const handleToolSelection = (e: React.MouseEvent<HTMLLIElement>) => {
-    if (e.target !== e.currentTarget) return;
-    const toolName = Object.values(TOOL_OPTIONS).find(
-      (tool) => tool === e.currentTarget.id
-    );
-
-    if (store.current === toolName) {
-      store.clearTool();
-    } else {
-      toolName && store.setTool(toolName);
-    }
-    if (toolName && TOOL_OPTIONS[toolName] === TOOL_OPTIONS.BRUSH_SIZE_PICKER)
-      store.toggleDisplayBrush();
-  };
-
-  function handleCircleCreation(offsetX: number, offsetY: number) {
-    switch (true) {
-      case !circle.readyToRender && !circle.centerPointSet:
-        circle.setCenterPoint(offsetX, offsetY);
-        break;
-      case !circle.readyToRender &&
-        circle.centerPointSet &&
-        !circle.outerPointSet:
-        circle.setOuterPoint(offsetX, offsetY);
-        circle.setReadyToRender = true;
-        setIsDrawing(false);
-        return;
-      default:
-        break;
-    }
-  }
-  function handleRectangleCreation(offsetX: number, offsetY: number) {
-    switch (true) {
-      case !rectangle.readyToRender && !rectangle.initialPointSet:
-        rectangle.setInitialPoint(offsetX, offsetY);
-        break;
-      case !rectangle.readyToRender &&
-        rectangle.initialPointSet &&
-        !rectangle.finalPointSet:
-        rectangle.setFinalPoint(offsetX, offsetY);
-        rectangle.setReadyToRender = true;
-        setIsDrawing(false);
-        return;
-      default:
-        break;
-    }
-  }
-  function handleLineCreation(offsetX: number, offsetY: number) {
-    switch (true) {
-      case !line.readyToRender && !line.initialPointSet:
-        line.setInitialPoint(offsetX, offsetY);
-        break;
-      case !line.readyToRender && line.initialPointSet && !line.finalPointSet:
-        line.setFinalPoint(offsetX, offsetY);
-        line.setReadyToRender = true;
-        setIsDrawing(false);
-        return;
-      default:
-        break;
-    }
-  }
-  function handleSelectCreation(offsetX: number, offsetY: number) {
-    switch (true) {
-      case !selectBox.readyToRender && !selectBox.initialPointSet:
-        selectBox.setInitialPoint(offsetX, offsetY);
-        break;
-      case !selectBox.readyToRender &&
-        selectBox.initialPointSet &&
-        !selectBox.finalPointSet:
-        selectBox.setFinalPoint(offsetX, offsetY);
-        selectBox.setReadyToRender = true;
-        setIsDrawing(false);
-        return;
-      default:
-        break;
-    }
-  }
-
-  const handleToolWidthChange = (
-    e: React.FocusEvent<HTMLInputElement>
-  ): void => {
-    const { valueAsNumber } = e.target;
-    e.preventDefault();
-    e.stopPropagation();
-    setToolWidth(valueAsNumber);
   };
 
   return (

@@ -7,12 +7,12 @@ import {
   TOOL_OPTIONS,
   TOOL_OPTIONS_TYPE,
   UNDEFINED_POINT_TYPE,
-} from './../../../interfaces';
+} from '../../../interfaces';
 
 interface ICircleProps {
-  _centerPoint: POINT_TYPE;
-  _outerPoint: POINT_TYPE;
-  _drawingOuterPoint: POINT_TYPE;
+  centerPoint: POINT_TYPE;
+  outerPoint: POINT_TYPE;
+  drawingOuterPoint: POINT_TYPE;
   renderPreview: (ctx: CanvasRenderingContext2D) => void;
   renderShape: (
     ctx: CanvasRenderingContext2D,
@@ -20,6 +20,7 @@ interface ICircleProps {
   ) => void;
   reset: () => void;
 }
+
 const INITIAL_CIRCLE_POINT: UNDEFINED_POINT_TYPE = [undefined, undefined];
 const INITIAL_BOUNDS: CIRCLE_BOUNDS_PROPS = {
   initialPoint: INITIAL_CIRCLE_POINT,
@@ -30,33 +31,77 @@ const INITIAL_BOUNDS: CIRCLE_BOUNDS_PROPS = {
 
 class Circle implements ICircleProps {
   type: TOOL_OPTIONS_TYPE = TOOL_OPTIONS.CIRCLE;
-  _radius: number = 0;
-  _centerPoint: POINT_TYPE = INITIAL_CIRCLE_POINT;
-  _outerPoint: POINT_TYPE = INITIAL_CIRCLE_POINT;
-  _drawingOuterPoint: POINT_TYPE = INITIAL_CIRCLE_POINT;
-  _shouldRender: boolean = false;
+
+  radius: number = 0;
+
+  centerPoint: POINT_TYPE = INITIAL_CIRCLE_POINT;
+
+  outerPoint: POINT_TYPE = INITIAL_CIRCLE_POINT;
+
+  drawingOuterPoint: POINT_TYPE = INITIAL_CIRCLE_POINT;
+
+  shouldRender: boolean = false;
+
   bounds: CIRCLE_BOUNDS_PROPS = INITIAL_BOUNDS;
+
+  constructor(json?: string) {
+    if (json !== undefined) {
+      this.parse(json);
+    }
+  }
+
+  get centerPointSet(): boolean {
+    return this.centerPoint.every((p) => p !== undefined && !Number.isNaN(p));
+  }
+
+  get drawingOuterPointSet(): boolean {
+    return this.drawingOuterPoint.every(
+      (p: number | undefined) => p && !Number.isNaN(p)
+    );
+  }
+
+  get outerPointSet(): boolean {
+    return this.outerPoint.every((p) => p !== undefined && !Number.isNaN(p));
+  }
+
+  get readyToRender(): boolean {
+    return this.shouldRender;
+  }
+
+  set setReadyToRender(ready: boolean) {
+    this.shouldRender = ready;
+  }
+
+  static checkIfInBounds(
+    boundingBoxBounds: BOUNDS_PROPS,
+    entityJson: string
+  ): boolean {
+    const circleBounds = Utils.convertCircularBoundsToRectangular(
+      new Circle(entityJson).getBounds()
+    );
+    return Utils.checkIfWithinBounds(boundingBoxBounds, circleBounds);
+  }
 
   renderShape(
     ctx: CanvasRenderingContext2D,
     previewCtx: CanvasRenderingContext2D
   ): string {
-    //save context styles.
+    // save context styles.
     ctx.save();
     previewCtx.save();
-    //clear preview
-    console.log({ctx})
+    // clear preview
+
     previewCtx.clearRect(
       0,
       0,
       previewCtx.canvas.width,
       previewCtx.canvas.height
     );
-    //render circle
+    // render circle
     this.drawShape(ctx);
     ctx.restore();
     previewCtx.restore();
-    //return stringified Entity
+    // return Entity in string form.
     const entityJson = this.json();
     this.#resetProperties();
     return entityJson;
@@ -65,41 +110,21 @@ class Circle implements ICircleProps {
   renderPreview(ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     this.drawShape(ctx, true);
-    this._drawingOuterPoint = INITIAL_CIRCLE_POINT;
-  }
-
-  get centerPointSet(): boolean {
-    return this._centerPoint.every((p: number | undefined) => p && !isNaN(p));
-  }
-
-  get drawingOuterPointSet(): boolean {
-    return this._drawingOuterPoint.every(
-      (p: number | undefined) => p && !isNaN(p)
-    );
-  }
-
-  get outerPointSet(): boolean {
-    return this._outerPoint.every((p: number | undefined) => p && !isNaN(p));
-  }
-  get readyToRender(): boolean {
-    return this._shouldRender;
-  }
-
-  set setReadyToRender(ready: boolean) {
-    this._shouldRender = ready;
+    this.drawingOuterPoint = INITIAL_CIRCLE_POINT;
   }
 
   setCenterPoint = (x: number, y: number) => {
-    this._centerPoint = [x, y];
+    this.centerPoint = [x, y];
   };
 
   setDrawingOuterPoint = (x: number, y: number) => {
-    this._drawingOuterPoint = [x, y];
+    this.drawingOuterPoint = [x, y];
   };
 
   setOuterPoint = (x: number, y: number) => {
-    let centerPoint: FILLED_POINT_TYPE = this._centerPoint as FILLED_POINT_TYPE;
-    let outerPoint: FILLED_POINT_TYPE = [x, y];
+    const centerPoint: FILLED_POINT_TYPE = this
+      .centerPoint as FILLED_POINT_TYPE;
+    const outerPoint: FILLED_POINT_TYPE = [x, y];
     this.bounds = {
       initialPoint: centerPoint,
       finalPoint: outerPoint,
@@ -110,26 +135,14 @@ class Circle implements ICircleProps {
       area: Math.PI * this.bounds.radius ** 2,
     };
 
-    this._outerPoint = outerPoint;
+    this.outerPoint = outerPoint;
   };
 
-  #resetProperties(): Promise<void> {
-    return new Promise((resolve) => {
-      this._radius = 0;
-      this._centerPoint = INITIAL_CIRCLE_POINT;
-      this._outerPoint = INITIAL_CIRCLE_POINT;
-      this._drawingOuterPoint = INITIAL_CIRCLE_POINT;
-      this.setReadyToRender = false;
-      this.bounds = INITIAL_BOUNDS;
-      resolve();
-    });
+  reset() {
+    this.#resetProperties();
   }
 
-  async reset() {
-    await this.#resetProperties();
-  }
-
-  async parse(jsonEntity: string) {
+  parse(jsonEntity: string) {
     const object: Circle = JSON.parse(jsonEntity);
     Object.assign(this, object);
   }
@@ -139,31 +152,31 @@ class Circle implements ICircleProps {
   }
 
   drawShape(ctx: CanvasRenderingContext2D, isPreview?: boolean): void {
-    let centerPoint = this._centerPoint as [number, number];
-    let outerPoint = (
-      isPreview ? this._drawingOuterPoint : this._outerPoint
+    const centerPoint = this.centerPoint as [number, number];
+    const outerPoint = (
+      isPreview ? this.drawingOuterPoint : this.outerPoint
     ) as [number, number];
-    this._radius = Math.sqrt(
+    this.radius = Math.sqrt(
       Math.abs(centerPoint[0] - outerPoint[0]) ** 2 +
         Math.abs(centerPoint[1] - outerPoint[1]) ** 2
     );
 
     ctx.beginPath();
-    ctx.arc(centerPoint[0], centerPoint[1], this._radius, 0, 2 * Math.PI, true);
+    ctx.arc(centerPoint[0], centerPoint[1], this.radius, 0, 2 * Math.PI, true);
     ctx.stroke();
   }
 
-  static checkIfInBounds(boundingBoxBounds: BOUNDS_PROPS, entityJson: string): boolean {
-    let circleBounds = Utils.convertCircularBoundsToRectangular(
-      new Circle(entityJson).getBounds()
-    );
-    return Utils.checkIfWithinBounds(boundingBoxBounds,circleBounds)
-  }
   getBounds() {
     return this.bounds;
   }
-  constructor(json?:string) {
-    json && this.parse(json);
+
+  #resetProperties() {
+    this.radius = 0;
+    this.centerPoint = INITIAL_CIRCLE_POINT;
+    this.outerPoint = INITIAL_CIRCLE_POINT;
+    this.drawingOuterPoint = INITIAL_CIRCLE_POINT;
+    this.setReadyToRender = false;
+    this.bounds = INITIAL_BOUNDS;
   }
 }
 
